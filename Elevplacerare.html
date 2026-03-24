@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatisk Elevplacerare 3000</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #dcdcdc; 
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden; 
+        }
+        
+        #sidebar {
+            width: 320px;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        #main-content {
+            flex-grow: 1;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 5px; color: #333; line-height: 1.3;}
+        label { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; display: block;}
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            resize: vertical;
+        }
+        .layout-box { font-family: monospace; font-size: 1.1rem; }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        
+        .top-buttons { display: flex; gap: 10px; }
+        .btn-small { padding: 8px; font-size: 0.9rem; background-color: #e0e0e0; color: #333; }
+        .btn-small:hover { background-color: #ccc; }
+
+        #btn-settings { background-color: #2196F3; color: white; margin-bottom: 10px;}
+        #btn-settings:hover { background-color: #0b7dda; }
+        #btn-place { background-color: #4CAF50; color: white; }
+        #btn-place:hover { background-color: #45a049; }
+        
+        /* Bottensektionen med signatur och PDF-knapp */
+        .bottom-section { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+        .credit { font-size: 0.8rem; color: #666; text-align: center; }
+        #btn-print { background-color: #ff9800; color: white; }
+        #btn-print:hover { background-color: #e68a00; }
+
+        /* --- MODAL CSS --- */
+        .modal {
+            display: none;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        #settingsModal { z-index: 1000; }
+        #rulesModal { z-index: 1001; }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .close-btn {
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+            margin-top: -10px;
+        }
+        .close-btn:hover { color: black; }
+        
+        #btn-save-settings { background-color: #2196F3; color: white; margin-top: 15px;}
+        #btn-save-rules { background-color: #ff4c4c; color: white; margin-top: 15px;}
+
+        @media print {
+            #sidebar { display: none; }
+            #main-content { padding: 0; }
+            body { background-color: white; }
+            canvas { width: 100vw; height: 100vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>🤖 Automatisk Elevplacerare 3000</h2>
+        
+        <div class="top-buttons">
+            <button class="btn-small" onclick="saveProject()">💾 Spara</button>
+            <button class="btn-small" onclick="document.getElementById('file-input').click()">📂 Ladda</button>
+            <input type="file" id="file-input" style="display: none;" accept=".json" onchange="loadProject(event)">
+        </div>
+        
+        <div>
+            <label>Klasslista (ett namn per rad):</label>
+            <textarea id="input-students" rows="12">Rincewind
+Twoflower
+Vimes
+Carrot
+Angua
+Nobby
+Vetinari
+Granny
+Nanny
+Magrat
+Death
+Susan
+Ridcully</textarea>
+        </div>
+
+        <div>
+            <button id="btn-settings" onclick="openSettings()">⚙️ Inställningar (Layout)</button>
+            <button id="btn-place" onclick="generatePlacement()">Placera Elever!</button>
+        </div>
+
+        <div class="bottom-section">
+            <span class="credit">Skapad av Ivan Kljucevic</span>
+            <button id="btn-print" onclick="window.print()">📄 Spara som PDF / Skriv ut</button>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <canvas id="classroomCanvas"></canvas>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeSettings()">&times;</span>
+            <h2>⚙️ Inställningar</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label>Layout (X = Bänk, - = Gång):</label>
+                <textarea id="input-layout" class="layout-box" rows="5">X X X - X X - X X X
+X X X - X X - X X X
+- - - - - - - - - -
+X X X - X X - X X X</textarea>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <label style="margin: 0;">Anpassningar:</label>
+                <button onclick="openRules()" style="width: auto; padding: 5px 12px; background-color: #ff4c4c; color: white; font-size: 1rem; border-radius: 4px;">❌ Öppna</button>
+            </div>
+
+            <button id="btn-save-settings" onclick="closeSettings()">Spara Layout</button>
+        </div>
+    </div>
+
+    <div id="rulesModal" class="modal">
+        <div class="modal-content" style="width: 350px;">
+            <span class="close-btn" onclick="closeRules()">&times;</span>
+            <h2>❌ Anpassningar</h2>
+            
+            <div style="margin-bottom: 10px;">
+                <label>Ska sitta längst fram (t.ex. Rincewind, Twoflower):</label>
+                <textarea id="input-front" rows="2"></textarea>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label>Ska sitta längst bak (t.ex. Death, Ridcully):</label>
+                <textarea id="input-back" rows="2"></textarea>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label>Får INTE sitta ihop (t.ex. Vimes, Nobby):</label>
+                <textarea id="input-rules" rows="3">Vimes, Vetinari
+Rincewind, Death</textarea>
+            </div>
+
+            <button id="btn-save-rules" onclick="closeRules()">Spara Anpassningar</button>
+        </div>
+    </div>
+
+    <script>
+        let lastClassroom = [];
+
+        function saveProject() {
+            const data = {
+                students: document.getElementById('input-students').value,
+                layout: document.getElementById('input-layout').value,
+                rules: document.getElementById('input-rules').value,
+                front: document.getElementById('input-front').value,
+                back: document.getElementById('input-back').value
+            };
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "bankplacering.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function loadProject(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.students !== undefined) document.getElementById('input-students').value = data.students;
+                    if (data.layout !== undefined) document.getElementById('input-layout').value = data.layout;
+                    if (data.rules !== undefined) document.getElementById('input-rules').value = data.rules;
+                    if (data.front !== undefined) document.getElementById('input-front').value = data.front;
+                    if (data.back !== undefined) document.getElementById('input-back').value = data.back;
+                    
+                    alert("Klassen, layouten och anpassningarna laddades in!");
+                    lastClassroom = [];
+                    drawClassroom([]);
+                } catch (err) {
+                    alert("Kunde inte läsa filen.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
+        function closeSettings() { document.getElementById("settingsModal").style.display = "none"; }
+        function openRules() { document.getElementById("rulesModal").style.display = "flex"; }
+        function closeRules() { document.getElementById("rulesModal").style.display = "none"; }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function parseNames(text) {
+            return text.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(s => s !== "");
+        }
+
+        function checkRules(classroom, rules) {
+            const rows = classroom.length;
+            for (let r = 0; r < rows; r++) {
+                const cols = classroom[r].length;
+                for (let c = 0; c < cols; c++) {
+                    const student1 = classroom[r][c];
+                    if (student1 === "[Tom plats]" || student1 === "[Gång]" || student1 === null) continue;
+                    
+                    const s1Lower = student1.toLowerCase(); 
+
+                    if (c + 1 < cols) {
+                        const student2 = classroom[r][c + 1];
+                        if (student2 && student2 !== "[Gång]" && student2 !== "[Tom plats]") {
+                            const s2Lower = student2.toLowerCase();
+                            if (rules.some(pair => (pair[0] === s1Lower && pair[1] === s2Lower) || (pair[1] === s1Lower && pair[0] === s2Lower))) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    if (r + 1 < rows && c < classroom[r+1].length) {
+                        const student3 = classroom[r + 1][c];
+                        if (student3 && student3 !== "[Gång]" && student3 !== "[Tom plats]") {
+                            const s3Lower = student3.toLowerCase();
+                            if (rules.some(pair => (pair[0] === s1Lower && pair[1] === s3Lower) || (pair[1] === s1Lower && pair[0] === s3Lower))) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function generatePlacement() {
+            const studentText = document.getElementById('input-students').value;
+            let students = studentText.split('\n').map(s => s.trim()).filter(s => s !== "");
+
+            const reqFront = parseNames(document.getElementById('input-front').value);
+            const reqBack = parseNames(document.getElementById('input-back').value);
+
+            let frontStudents = students.filter(name => reqFront.includes(name.toLowerCase()));
+            let backStudents = students.filter(name => reqBack.includes(name.toLowerCase()));
+            let remainingStudents = students.filter(name => !reqFront.includes(name.toLowerCase()) && !reqBack.includes(name.toLowerCase()));
+
+            const layoutText = document.getElementById('input-layout').value;
+            let layoutMap = [];
+            let totalSeats = 0;
+
+            layoutText.split('\n').forEach(line => {
+                let row = [];
+                line.trim().split(/\s+/).forEach(char => {
+                    if (char.toUpperCase() === 'X') {
+                        row.push('BÄNK');
+                        totalSeats++;
+                    } else if (char === '-') {
+                        row.push('GÅNG');
+                    }
+                });
+                if (row.length > 0) layoutMap.push(row);
+            });
+
+            if (totalSeats === 0) {
+                alert("Fel: Din layout har inga bänkar (X)!");
+                return;
+            }
+            if (students.length > totalSeats) {
+                alert(`Fel: Du har ${students.length} elever men bara ${totalSeats} bänkar!`);
+                return;
+            }
+
+            while (frontStudents.length + backStudents.length + remainingStudents.length < totalSeats) {
+                remainingStudents.push("[Tom plats]");
+            }
+
+            let frontRowIdx = -1;
+            let backRowIdx = -1;
+            for (let r = 0; r < layoutMap.length; r++) {
+                if (layoutMap[r].includes('BÄNK')) {
+                    if (frontRowIdx === -1) frontRowIdx = r;
+                    backRowIdx = r; 
+                }
+            }
+
+            let frontSeats = [];
+            let backSeats = [];
+            let otherSeats = [];
+
+            for (let r = 0; r < layoutMap.length; r++) {
+                for (let c = 0; c < layoutMap[r].length; c++) {
+                    if (layoutMap[r][c] === 'BÄNK') {
+                        if (r === frontRowIdx) frontSeats.push({r, c});
+                        else if (r === backRowIdx) backSeats.push({r, c});
+                        else otherSeats.push({r, c});
+                    }
+                }
+            }
+
+            if (frontStudents.length > frontSeats.length) {
+                alert("Fel: Du har placerat fler elever längst fram än vad det finns bänkar där."); return;
+            }
+            if (backStudents.length > backSeats.length) {
+                alert("Fel: Du har placerat fler elever längst bak än vad det finns bänkar där."); return;
+            }
+
+            let rules = [];
+            document.getElementById('input-rules').value.split('\n').forEach(line => {
+                if (line.includes(',')) {
+                    let parts = line.split(',').map(p => p.trim().toLowerCase());
+                    if (parts.length === 2) rules.push(parts);
+                }
+            });
+
+            let finalClassroom = null;
+
+            for (let attempt = 0; attempt < 2000; attempt++) {
+                let classroom = [];
+                for(let r=0; r<layoutMap.length; r++) {
+                    let row = [];
+                    for(let c=0; c<layoutMap[r].length; c++) {
+                        row.push(layoutMap[r][c] === 'GÅNG' ? "[Gång]" : null);
+                    }
+                    classroom.push(row);
+                }
+
+                let sf = [...frontStudents]; shuffleArray(sf);
+                let sb = [...backStudents];  shuffleArray(sb);
+                let sr = [...remainingStudents]; shuffleArray(sr);
+
+                let sFrontSeats = [...frontSeats]; shuffleArray(sFrontSeats);
+                let sBackSeats = [...backSeats]; shuffleArray(sBackSeats);
+
+                sf.forEach(student => {
+                    let seat = sFrontSeats.pop(); 
+                    classroom[seat.r][seat.c] = student;
+                });
+                
+                sb.forEach(student => {
+                    let seat = sBackSeats.pop(); 
+                    classroom[seat.r][seat.c] = student;
+                });
+
+                let sRemainingSeats = [...sFrontSeats, ...sBackSeats, ...otherSeats];
+                shuffleArray(sRemainingSeats);
+
+                sr.forEach(student => {
+                    let seat = sRemainingSeats.pop();
+                    classroom[seat.r][seat.c] = student;
+                });
+
+                if (checkRules(classroom, rules)) {
+                    finalClassroom = classroom;
+                    break;
+                }
+            }
+
+            if (!finalClassroom) {
+                alert("Kunde inte hitta en placering som följer reglerna på 2000 försök.");
+            } else {
+                lastClassroom = finalClassroom;
+                drawClassroom(finalClassroom);
+            }
+        }
+
+        function drawClassroom(classroom) {
+            const canvas = document.getElementById('classroomCanvas');
+            const container = document.getElementById('main-content');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let a4W, a4H;
+            if (canvas.width / canvas.height > 1.414) {
+                a4H = canvas.height * 0.95; 
+                a4W = a4H * 1.414;
+            } else {
+                a4W = canvas.width * 0.95; 
+                a4H = a4W / 1.414;
+            }
+
+            const offsetX = (canvas.width - a4W) / 2;
+            const offsetY = (canvas.height - a4H) / 2;
+
+            ctx.fillStyle = "white";
+            ctx.fillRect(offsetX, offsetY, a4W, a4H);
+            ctx.strokeStyle = "#ccc";
+            ctx.strokeRect(offsetX, offsetY, a4W, a4H);
+
+            if (!classroom || classroom.length === 0) return;
+
+            const uDeskW = 1.0;  
+            const uDeskH = 0.45; 
+            const uGapX = 0.2;   
+            const uGapY = 0.3;   
+
+            let maxRowUnits = 0;
+            let rowWidths = [];
+
+            for (let r = 0; r < classroom.length; r++) {
+                let rowU = 0;
+                const row = classroom[r];
+                for (let c = 0; c < row.length; c++) {
+                    rowU += uDeskW; 
+                    if (row[c] !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") {
+                        rowU += uGapX;
+                    }
+                }
+                rowWidths.push(rowU);
+                if (rowU > maxRowUnits) maxRowUnits = rowU;
+            }
+
+            if (maxRowUnits === 0) return;
+
+            const totalHeightUnits = classroom.length * uDeskH + (classroom.length - 1) * uGapY;
+
+            const marginX = a4W * 0.05;
+            const marginY = a4H * 0.05;
+            const boardAreaH = a4H * 0.15; 
+
+            const usableW = a4W - 2 * marginX;
+            const usableH = a4H - 2 * marginY - boardAreaH;
+
+            const scaleX = usableW / maxRowUnits;
+            const scaleY = usableH / totalHeightUnits;
+            let unitPx = Math.min(scaleX, scaleY);
+            
+            if (unitPx > a4W * 0.12) unitPx = a4W * 0.12; 
+
+            const deskW = unitPx * uDeskW;
+            const deskH = unitPx * uDeskH;
+            const gapX = unitPx * uGapX;
+            const gapY = unitPx * uGapY;
+
+            const totalPxH = totalHeightUnits * unitPx;
+            const startYGlobal = offsetY + marginY + boardAreaH + (usableH - totalPxH) / 2;
+
+            const boardW = a4W * 0.3;
+            const boardH = a4H * 0.08;
+            const boardX = offsetX + (a4W - boardW) / 2;
+            const boardY = offsetY + marginY;
+
+            ctx.fillStyle = "#333";
+            ctx.fillRect(boardX, boardY, boardW, boardH);
+            ctx.fillStyle = "white";
+            let boardFontSize = Math.max(12, boardH * 0.4);
+            ctx.font = `bold ${boardFontSize}px Arial`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("TAVLA", boardX + boardW/2, boardY + boardH/2);
+
+            let fontSize = Math.max(12, deskH * 0.40); 
+            ctx.font = `${fontSize}px Arial`;
+
+            for (let r = 0; r < classroom.length; r++) {
+                const row = classroom[r];
+                const rowPxW = rowWidths[r] * unitPx;
+                const startX = offsetX + marginX + (usableW - rowPxW) / 2; 
+
+                let currentX = startX;
+                let currentY = startYGlobal + r * (deskH + gapY);
+
+                for (let c = 0; c < row.length; c++) {
+                    const student = row[c];
+
+                    if (student !== "[Gång]") {
+                        ctx.fillStyle = (student === "[Tom plats]") ? "#f0f0f0" : "white";
+                        ctx.fillRect(currentX, currentY, deskW, deskH);
+
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(currentX, currentY, deskW, deskH);
+
+                        ctx.fillStyle = (student === "[Tom plats]") ? "#999" : "black";
+                        ctx.fillText(student, currentX + deskW/2, currentY + deskH/2);
+                    }
+
+                    currentX += deskW;
+                    if (student !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") {
+                        currentX += gapX;
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('resize', () => { drawClassroom(lastClassroom); });
+        window.onload = function() { drawClassroom([]); }
+    </script>
+</body>
+</html>
