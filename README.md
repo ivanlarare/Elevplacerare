@@ -24,6 +24,8 @@ Längst bak: Skriv namnen på de som ska sitta längst bak.
 
 Får INTE sitta ihop: Skriv in de elever som behöver arbetsro från varandra. Skriv ett par per rad, med ett kommatecken emellan (t.ex. Vimes, Nobby).
 
+MÅSTE sitta ihop: Skriv in elever som ska jobba bredvid varandra. De hamnar alltid axel mot axel utan någon gång emellan. Skriv ett par per rad och separera med kommatecken (t.ex. Nanny, Granny).
+
 4. Slumpa placeringen!
 Stäng inställningarna och klicka på den stora gröna knappen Placera Elever!. Programmet testar nu tusentals kombinationer tills det hittar en placering som följer alla dina regler. Blev det inte perfekt? Klicka bara på knappen igen för en ny variant!
 
