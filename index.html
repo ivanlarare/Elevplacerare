@@ -71,7 +71,6 @@
         .btn-small { padding: 8px; font-size: 0.9rem; background-color: #e0e0e0; color: #333; }
         .btn-small:hover { background-color: #ccc; }
 
-        /* Knappar i huvudmenyn */
         #btn-settings { background-color: #2196F3; color: white; margin-bottom: 10px;}
         #btn-settings:hover { background-color: #0b7dda; }
         
@@ -99,7 +98,6 @@
             align-items: center;
             z-index: 1000;
         }
-        /* Submodalen ska ligga ovanför huvudmodalen */
         #rulesModal { z-index: 1001; }
 
         .modal-content {
@@ -111,7 +109,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             position: relative;
         }
-        /* Specialstyling för hjälpmodalen så texten ryms */
         .help-content {
             width: 500px;
             max-height: 80vh;
@@ -220,8 +217,13 @@ X X X - X X - X X X</textarea>
             </div>
 
             <div style="margin-bottom: 10px;">
-                <label>Ska sitta längst bak (t.ex. Death, Ridcully):</label>
+                <label>Ska sitta längst bak (t.ex. Ridcully):</label>
                 <textarea id="input-back" rows="2"></textarea>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <label>MÅSTE sitta ihop (t.ex. Nanny, Granny):</label>
+                <textarea id="input-friends" rows="2">Nanny, Granny</textarea>
             </div>
 
             <div style="margin-bottom: 10px;">
@@ -253,15 +255,16 @@ Rincewind, Death</textarea>
                 <p><em>Exempel för parbänkar med en mittgång:</em><br><code class="layout-box">X X - X X</code></p>
                 
                 <h3>3. Sätt upp regler (Anpassningar)</h3>
-                <p>Inne i inställningarna klickar du på knappen <strong>❌ Öppna</strong> bredvid Anpassningar. Här kan du bestämma tre viktiga saker:</p>
+                <p>Inne i inställningarna klickar du på knappen <strong>❌ Öppna</strong> bredvid Anpassningar. Här kan du bestämma fyra viktiga saker:</p>
                 <ul>
                     <li><strong>Längst fram:</strong> Skriv namnen på de som måste sitta på första raden (t.ex. <em>Anna, Kalle</em>).</li>
                     <li><strong>Längst bak:</strong> Skriv namnen på de som ska sitta längst bak.</li>
-                    <li><strong>Får INTE sitta ihop:</strong> Skriv in de par som behöver arbetsro från varandra. Skriv ett par per rad, med ett kommatecken emellan (t.ex. <em>Vimes, Nobby</em>).</li>
+                    <li><strong>MÅSTE sitta ihop:</strong> Skriv in elever som ska jobba bredvid varandra. De kommer hamna horisontellt bredvid varandra utan någon gång emellan. Skriv ett par per rad, separera med kommatecken.</li>
+                    <li><strong>Får INTE sitta ihop:</strong> Skriv in de par som behöver arbetsro från varandra.</li>
                 </ul>
                 
                 <h3>4. Slumpa placeringen!</h3>
-                <p>Stäng inställningarna och klicka på den stora gröna knappen <strong>Placera Elever!</strong>. Programmet testar nu tusentals kombinationer tills det hittar en placering som följer alla dina regler.</p>
+                <p>Stäng inställningarna och klicka på den stora gröna knappen <strong>Placera Elever!</strong>. Programmet testar nu tiotusentals kombinationer tills det hittar en placering som följer alla dina regler.</p>
                 
                 <h3>5. Spara och Skriv ut</h3>
                 <ul>
@@ -281,6 +284,7 @@ Rincewind, Death</textarea>
                 students: document.getElementById('input-students').value,
                 layout: document.getElementById('input-layout').value,
                 rules: document.getElementById('input-rules').value,
+                friends: document.getElementById('input-friends').value,
                 front: document.getElementById('input-front').value,
                 back: document.getElementById('input-back').value
             };
@@ -306,6 +310,7 @@ Rincewind, Death</textarea>
                     if (data.students !== undefined) document.getElementById('input-students').value = data.students;
                     if (data.layout !== undefined) document.getElementById('input-layout').value = data.layout;
                     if (data.rules !== undefined) document.getElementById('input-rules').value = data.rules;
+                    if (data.friends !== undefined) document.getElementById('input-friends').value = data.friends;
                     if (data.front !== undefined) document.getElementById('input-front').value = data.front;
                     if (data.back !== undefined) document.getElementById('input-back').value = data.back;
                     
@@ -320,17 +325,13 @@ Rincewind, Death</textarea>
             event.target.value = '';
         }
 
-        // Öppna/Stäng Modaler
         function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
         function closeSettings() { document.getElementById("settingsModal").style.display = "none"; }
         function openRules() { document.getElementById("rulesModal").style.display = "flex"; }
         function closeRules() { document.getElementById("rulesModal").style.display = "none"; }
-        
-        // Nya funktioner för Hjälp-modalen
         function openHelp() { document.getElementById("helpModal").style.display = "flex"; }
         function closeHelp() { document.getElementById("helpModal").style.display = "none"; }
 
-        // Stäng modal om man klickar utanför innehållet
         window.onclick = function(event) {
             const settingsM = document.getElementById("settingsModal");
             const rulesM = document.getElementById("rulesModal");
@@ -351,8 +352,10 @@ Rincewind, Death</textarea>
             return text.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(s => s !== "");
         }
 
-        function checkRules(classroom, rules) {
+        function checkRules(classroom, rules, friendsRules) {
             const rows = classroom.length;
+            
+            // 1. Kolla vilka som INTE får sitta ihop
             for (let r = 0; r < rows; r++) {
                 const cols = classroom[r].length;
                 for (let c = 0; c < cols; c++) {
@@ -366,7 +369,7 @@ Rincewind, Death</textarea>
                         if (student2 && student2 !== "[Gång]" && student2 !== "[Tom plats]") {
                             const s2Lower = student2.toLowerCase();
                             if (rules.some(pair => (pair[0] === s1Lower && pair[1] === s2Lower) || (pair[1] === s1Lower && pair[0] === s2Lower))) {
-                                return false;
+                                return false; 
                             }
                         }
                     }
@@ -376,18 +379,46 @@ Rincewind, Death</textarea>
                         if (student3 && student3 !== "[Gång]" && student3 !== "[Tom plats]") {
                             const s3Lower = student3.toLowerCase();
                             if (rules.some(pair => (pair[0] === s1Lower && pair[1] === s3Lower) || (pair[1] === s1Lower && pair[0] === s3Lower))) {
-                                return false;
+                                return false; 
                             }
                         }
                     }
                 }
             }
-            return true;
+
+            // 2. Kolla vilka som MÅSTE sitta ihop (ENBART HORISONTELLT)
+            for (let i = 0; i < friendsRules.length; i++) {
+                let s1Lower = friendsRules[i][0];
+                let s2Lower = friendsRules[i][1];
+                let foundTogether = false;
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < classroom[r].length; c++) {
+                        let currentStudent = classroom[r][c];
+                        if (!currentStudent || currentStudent === "[Gång]" || currentStudent === "[Tom plats]") continue;
+
+                        if (currentStudent.toLowerCase() === s1Lower) {
+                            // Kolla enbart direkt till höger och direkt till vänster. 
+                            // Om det ligger en "[Gång]" i arrayen bredvid kommer checken automatiskt att slå fel, 
+                            // vilket innebär att de MÅSTE sitta i samma bänkgrupp för att testet ska passera.
+                            if (c + 1 < classroom[r].length && classroom[r][c+1] && classroom[r][c+1].toLowerCase() === s2Lower) foundTogether = true;
+                            if (c - 1 >= 0 && classroom[r][c-1] && classroom[r][c-1].toLowerCase() === s2Lower) foundTogether = true;
+                        }
+                    }
+                }
+                
+                if (!foundTogether) {
+                    return false; 
+                }
+            }
+
+            return true; 
         }
 
         function generatePlacement() {
             const studentText = document.getElementById('input-students').value;
             let students = studentText.split('\n').map(s => s.trim()).filter(s => s !== "");
+            let lowerStudents = students.map(s => s.toLowerCase());
 
             const reqFront = parseNames(document.getElementById('input-front').value);
             const reqBack = parseNames(document.getElementById('input-back').value);
@@ -464,9 +495,20 @@ Rincewind, Death</textarea>
                 }
             });
 
+            let friendsRules = [];
+            document.getElementById('input-friends').value.split('\n').forEach(line => {
+                if (line.includes(',')) {
+                    let parts = line.split(',').map(p => p.trim().toLowerCase());
+                    if (parts.length === 2 && lowerStudents.includes(parts[0]) && lowerStudents.includes(parts[1])) {
+                        friendsRules.push(parts);
+                    }
+                }
+            });
+
             let finalClassroom = null;
 
-            for (let attempt = 0; attempt < 2000; attempt++) {
+            // Ökat till 50 000 försök för att klara av striktare horisontella krav på ett snabbt sätt
+            for (let attempt = 0; attempt < 50000; attempt++) {
                 let classroom = [];
                 for(let r=0; r<layoutMap.length; r++) {
                     let row = [];
@@ -501,14 +543,14 @@ Rincewind, Death</textarea>
                     classroom[seat.r][seat.c] = student;
                 });
 
-                if (checkRules(classroom, rules)) {
+                if (checkRules(classroom, rules, friendsRules)) {
                     finalClassroom = classroom;
                     break;
                 }
             }
 
             if (!finalClassroom) {
-                alert("Kunde inte hitta en placering som följer reglerna på 2000 försök.");
+                alert("Kunde inte hitta en placering. Din kombination av vänner, ovänner och rader kanske krockar med varandra, eller så är den för komplex! (Testat 50 000 gånger)");
             } else {
                 lastClassroom = finalClassroom;
                 drawClassroom(finalClassroom);
