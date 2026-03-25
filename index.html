@@ -43,6 +43,7 @@
         }
 
         h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 5px; color: #333; line-height: 1.3;}
+        h3 { font-size: 1rem; margin-top: 15px; margin-bottom: 5px; color: #444; }
         label { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; display: block;}
         textarea {
             width: 100%;
@@ -70,12 +71,16 @@
         .btn-small { padding: 8px; font-size: 0.9rem; background-color: #e0e0e0; color: #333; }
         .btn-small:hover { background-color: #ccc; }
 
+        /* Knappar i huvudmenyn */
         #btn-settings { background-color: #2196F3; color: white; margin-bottom: 10px;}
         #btn-settings:hover { background-color: #0b7dda; }
+        
+        #btn-help { background-color: #ffeb3b; color: #333; margin-bottom: 10px; border: 1px solid #dbc800; }
+        #btn-help:hover { background-color: #fdd835; }
+
         #btn-place { background-color: #4CAF50; color: white; }
         #btn-place:hover { background-color: #45a049; }
         
-        /* Bottensektionen med signatur och PDF-knapp */
         .bottom-section { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
         .credit { font-size: 0.8rem; color: #666; text-align: center; }
         #btn-print { background-color: #ff9800; color: white; }
@@ -92,8 +97,9 @@
             background-color: rgba(0,0,0,0.5);
             justify-content: center;
             align-items: center;
+            z-index: 1000;
         }
-        #settingsModal { z-index: 1000; }
+        /* Submodalen ska ligga ovanför huvudmodalen */
         #rulesModal { z-index: 1001; }
 
         .modal-content {
@@ -103,7 +109,18 @@
             width: 400px;
             max-width: 90%;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
         }
+        /* Specialstyling för hjälpmodalen så texten ryms */
+        .help-content {
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .help-text p { font-size: 0.95rem; line-height: 1.5; color: #333; margin-top: 0; margin-bottom: 10px; }
+        .help-text ul { font-size: 0.95rem; line-height: 1.5; color: #333; margin-bottom: 15px; padding-left: 20px;}
+        .help-text li { margin-bottom: 5px; }
+
         .close-btn {
             float: right;
             font-size: 24px;
@@ -116,6 +133,7 @@
         
         #btn-save-settings { background-color: #2196F3; color: white; margin-top: 15px;}
         #btn-save-rules { background-color: #ff4c4c; color: white; margin-top: 15px;}
+        #btn-close-help { background-color: #333; color: white; margin-top: 15px; }
 
         @media print {
             #sidebar { display: none; }
@@ -155,6 +173,7 @@ Ridcully</textarea>
 
         <div>
             <button id="btn-settings" onclick="openSettings()">⚙️ Inställningar (Layout)</button>
+            <button id="btn-help" onclick="openHelp()">❓ Hjälp & Guide</button>
             <button id="btn-place" onclick="generatePlacement()">Placera Elever!</button>
         </div>
 
@@ -215,6 +234,45 @@ Rincewind, Death</textarea>
         </div>
     </div>
 
+    <div id="helpModal" class="modal">
+        <div class="modal-content help-content">
+            <span class="close-btn" onclick="closeHelp()">&times;</span>
+            <h2>❓ Guide: Automatisk Elevplacerare 3000</h2>
+            <div class="help-text">
+                <p>Välkommen till ditt nya favoritverktyg för bordsplaceringar! Programmet pusslar automatiskt ihop din klass baserat på hur ditt klassrum ser ut och vilka regler du sätter upp.</p>
+                
+                <h3>1. Lägg in din klass</h3>
+                <p>I rutan <strong>Klasslista</strong> till vänster skriver du in namnen på alla elever. Skriv <strong>ett namn per rad</strong>. (Programmet ignorerar stora/små bokstäver).</p>
+                
+                <h3>2. Rita ditt klassrum</h3>
+                <p>Klicka på den blå knappen <strong>⚙️ Inställningar (Layout)</strong>. Här "ritar" du upp hur bänkarna står i rummet med hjälp av två tecken:</p>
+                <ul>
+                    <li><strong>X</strong> = En bänk</li>
+                    <li><strong>-</strong> (bindestreck) = Ett tomrum / en gång</li>
+                </ul>
+                <p><em>Exempel för parbänkar med en mittgång:</em><br><code class="layout-box">X X - X X</code></p>
+                
+                <h3>3. Sätt upp regler (Anpassningar)</h3>
+                <p>Inne i inställningarna klickar du på knappen <strong>❌ Öppna</strong> bredvid Anpassningar. Här kan du bestämma tre viktiga saker:</p>
+                <ul>
+                    <li><strong>Längst fram:</strong> Skriv namnen på de som måste sitta på första raden (t.ex. <em>Anna, Kalle</em>).</li>
+                    <li><strong>Längst bak:</strong> Skriv namnen på de som ska sitta längst bak.</li>
+                    <li><strong>Får INTE sitta ihop:</strong> Skriv in de par som behöver arbetsro från varandra. Skriv ett par per rad, med ett kommatecken emellan (t.ex. <em>Vimes, Nobby</em>).</li>
+                </ul>
+                
+                <h3>4. Slumpa placeringen!</h3>
+                <p>Stäng inställningarna och klicka på den stora gröna knappen <strong>Placera Elever!</strong>. Programmet testar nu tusentals kombinationer tills det hittar en placering som följer alla dina regler.</p>
+                
+                <h3>5. Spara och Skriv ut</h3>
+                <ul>
+                    <li><strong>Spara / Ladda:</strong> Klicka på <strong>💾 Spara</strong> för att ladda ned en fil med din klass till datorn. Nästa gång klickar du på <strong>📂 Ladda</strong> för att få tillbaka allt direkt.</li>
+                    <li><strong>Skapa PDF:</strong> Klicka på den orangea knappen <strong>📄 Spara som PDF / Skriv ut</strong>. Välj "Spara som PDF" i utskriftsrutan för att spara filen!</li>
+                </ul>
+            </div>
+            <button id="btn-close-help" onclick="closeHelp()">Stäng Guide</button>
+        </div>
+    </div>
+
     <script>
         let lastClassroom = [];
 
@@ -262,10 +320,25 @@ Rincewind, Death</textarea>
             event.target.value = '';
         }
 
+        // Öppna/Stäng Modaler
         function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
         function closeSettings() { document.getElementById("settingsModal").style.display = "none"; }
         function openRules() { document.getElementById("rulesModal").style.display = "flex"; }
         function closeRules() { document.getElementById("rulesModal").style.display = "none"; }
+        
+        // Nya funktioner för Hjälp-modalen
+        function openHelp() { document.getElementById("helpModal").style.display = "flex"; }
+        function closeHelp() { document.getElementById("helpModal").style.display = "none"; }
+
+        // Stäng modal om man klickar utanför innehållet
+        window.onclick = function(event) {
+            const settingsM = document.getElementById("settingsModal");
+            const rulesM = document.getElementById("rulesModal");
+            const helpM = document.getElementById("helpModal");
+            if (event.target == settingsM) closeSettings();
+            if (event.target == rulesM) closeRules();
+            if (event.target == helpM) closeHelp();
+        }
 
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
