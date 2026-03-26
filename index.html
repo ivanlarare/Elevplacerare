@@ -80,8 +80,21 @@
         #btn-place { background-color: #4CAF50; color: white; }
         #btn-place:hover { background-color: #45a049; }
         
-        .bottom-section { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
-        .credit { font-size: 0.8rem; color: #666; text-align: center; }
+        .bottom-section { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+        .credit-row { display: flex; justify-content: space-between; align-items: center; }
+        .credit { font-size: 0.8rem; color: #666; }
+        .license-badge {
+            font-size: 0.75rem;
+            color: #555;
+            background-color: #e0e0e0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .license-badge:hover { background-color: #ccc; color: #000; }
+
         #btn-print { background-color: #ff9800; color: white; }
         #btn-print:hover { background-color: #e68a00; }
 
@@ -175,7 +188,10 @@ Ridcully</textarea>
         </div>
 
         <div class="bottom-section">
-            <span class="credit">Skapad av Ivan Kljucevic</span>
+            <div class="credit-row">
+                <span class="credit">Skapad av Ivan Kljucevic</span>
+                <a href="https://github.com/ivanlarare/Elevplacerare" target="_blank" class="license-badge">⚖️ GPL-3.0 Licens</a>
+            </div>
             <button id="btn-print" onclick="window.print()">📄 Spara som PDF / Skriv ut</button>
         </div>
     </div>
@@ -398,9 +414,6 @@ Rincewind, Death</textarea>
                         if (!currentStudent || currentStudent === "[Gång]" || currentStudent === "[Tom plats]") continue;
 
                         if (currentStudent.toLowerCase() === s1Lower) {
-                            // Kolla enbart direkt till höger och direkt till vänster. 
-                            // Om det ligger en "[Gång]" i arrayen bredvid kommer checken automatiskt att slå fel, 
-                            // vilket innebär att de MÅSTE sitta i samma bänkgrupp för att testet ska passera.
                             if (c + 1 < classroom[r].length && classroom[r][c+1] && classroom[r][c+1].toLowerCase() === s2Lower) foundTogether = true;
                             if (c - 1 >= 0 && classroom[r][c-1] && classroom[r][c-1].toLowerCase() === s2Lower) foundTogether = true;
                         }
@@ -507,7 +520,6 @@ Rincewind, Death</textarea>
 
             let finalClassroom = null;
 
-            // Ökat till 50 000 försök för att klara av striktare horisontella krav på ett snabbt sätt
             for (let attempt = 0; attempt < 50000; attempt++) {
                 let classroom = [];
                 for(let r=0; r<layoutMap.length; r++) {
