@@ -45,7 +45,7 @@
         h2 { margin-top: 0; font-size: 1.2rem; margin-bottom: 5px; color: #333; line-height: 1.3;}
         h3 { font-size: 1rem; margin-top: 15px; margin-bottom: 5px; color: #444; }
         label { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; display: block;}
-        textarea {
+        textarea, input[type="number"] {
             width: 100%;
             box-sizing: border-box;
             padding: 8px;
@@ -77,8 +77,11 @@
         #btn-help { background-color: #ffeb3b; color: #333; margin-bottom: 10px; border: 1px solid #dbc800; }
         #btn-help:hover { background-color: #fdd835; }
 
-        #btn-place { background-color: #4CAF50; color: white; }
+        #btn-place { background-color: #4CAF50; color: white; margin-bottom: 10px;}
         #btn-place:hover { background-color: #45a049; }
+
+        #btn-group { background-color: #9c27b0; color: white; margin-bottom: 10px; }
+        #btn-group:hover { background-color: #7b1fa2; }
         
         .bottom-section { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
         .credit-row { display: flex; justify-content: space-between; align-items: center; }
@@ -166,7 +169,7 @@
         
         <div>
             <label>Klasslista (ett namn per rad):</label>
-            <textarea id="input-students" rows="12">Rincewind
+            <textarea id="input-students" rows="10">Rincewind
 Twoflower
 Vimes
 Carrot
@@ -182,9 +185,24 @@ Ridcully</textarea>
         </div>
 
         <div>
-            <button id="btn-settings" onclick="openSettings()">⚙️ Inställningar (Layout)</button>
             <button id="btn-help" onclick="openHelp()">❓ Hjälp & Guide</button>
-            <button id="btn-place" onclick="generatePlacement()">Placera Elever!</button>
+            <button id="btn-settings" onclick="openSettings()">⚙️ Inställningar (Layout)</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #ddd; margin: 5px 0;">
+
+        <div>
+            <button id="btn-place" onclick="generatePlacement()">Placera i Klassrummet!</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #ddd; margin: 5px 0;">
+        
+        <div>
+            <button id="btn-group" onclick="generateGroups()">Slumpa Grupper!</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label style="margin:0; white-space: nowrap;">Antal grupper:</label>
+                <input type="number" id="input-group-count" value="4" min="2" max="15">
+            </div>
         </div>
 
         <div class="bottom-section">
@@ -228,22 +246,22 @@ X X X - X X - X X X</textarea>
             <h2>❌ Anpassningar</h2>
             
             <div style="margin-bottom: 10px;">
-                <label>Ska sitta längst fram (t.ex. Rincewind, Twoflower):</label>
+                <label>Ska sitta längst fram (Endast Klassrum):</label>
                 <textarea id="input-front" rows="2"></textarea>
             </div>
 
             <div style="margin-bottom: 10px;">
-                <label>Ska sitta längst bak (t.ex. Ridcully):</label>
+                <label>Ska sitta längst bak (Endast Klassrum):</label>
                 <textarea id="input-back" rows="2"></textarea>
             </div>
             
             <div style="margin-bottom: 10px;">
-                <label>MÅSTE sitta ihop (t.ex. Nanny, Granny):</label>
+                <label>MÅSTE sitta/vara i grupp ihop (t.ex. Nanny, Granny):</label>
                 <textarea id="input-friends" rows="2">Nanny, Granny</textarea>
             </div>
 
             <div style="margin-bottom: 10px;">
-                <label>Får INTE sitta ihop (t.ex. Vimes, Nobby):</label>
+                <label>Får INTE sitta/vara i grupp ihop (t.ex. Vimes, Nobby):</label>
                 <textarea id="input-rules" rows="3">Vimes, Vetinari
 Rincewind, Death</textarea>
             </div>
@@ -257,30 +275,29 @@ Rincewind, Death</textarea>
             <span class="close-btn" onclick="closeHelp()">&times;</span>
             <h2>❓ Guide: Automatisk Elevplacerare 3000</h2>
             <div class="help-text">
-                <p>Välkommen till ditt nya favoritverktyg för bordsplaceringar! Programmet pusslar automatiskt ihop din klass baserat på hur ditt klassrum ser ut och vilka regler du sätter upp.</p>
+                <p>Välkommen till ditt nya favoritverktyg för bordsplaceringar och grupper!</p>
                 
                 <h3>1. Lägg in din klass</h3>
                 <p>I rutan <strong>Klasslista</strong> till vänster skriver du in namnen på alla elever. Skriv <strong>ett namn per rad</strong>. (Programmet ignorerar stora/små bokstäver).</p>
                 
-                <h3>2. Rita ditt klassrum</h3>
-                <p>Klicka på den blå knappen <strong>⚙️ Inställningar (Layout)</strong>. Här "ritar" du upp hur bänkarna står i rummet med hjälp av två tecken:</p>
+                <h3>2. Rita ditt klassrum (För bordsplacering)</h3>
+                <p>Klicka på <strong>⚙️ Inställningar (Layout)</strong>. "Rita" upp bänkarna:</p>
                 <ul>
                     <li><strong>X</strong> = En bänk</li>
                     <li><strong>-</strong> (bindestreck) = Ett tomrum / en gång</li>
                 </ul>
-                <p><em>Exempel för parbänkar med en mittgång:</em><br><code class="layout-box">X X - X X</code></p>
                 
                 <h3>3. Sätt upp regler (Anpassningar)</h3>
-                <p>Inne i inställningarna klickar du på knappen <strong>❌ Öppna</strong> bredvid Anpassningar. Här kan du bestämma fyra viktiga saker:</p>
+                <p>Inne i inställningarna klickar du på <strong>❌ Öppna</strong> bredvid Anpassningar.</p>
                 <ul>
-                    <li><strong>Längst fram:</strong> Skriv namnen på de som måste sitta på första raden (t.ex. <em>Anna, Kalle</em>).</li>
-                    <li><strong>Längst bak:</strong> Skriv namnen på de som ska sitta längst bak.</li>
-                    <li><strong>MÅSTE sitta ihop:</strong> Skriv in elever som ska jobba bredvid varandra. De kommer hamna horisontellt bredvid varandra utan någon gång emellan. Skriv ett par per rad, separera med kommatecken.</li>
+                    <li><strong>Längst fram/bak:</strong> Gäller enbart för bordsplaceringen i klassrummet.</li>
+                    <li><strong>MÅSTE sitta ihop:</strong> Skriv in elever som ska jobba bredvid varandra eller hamna i samma grupp. Skriv ett par per rad, separera med kommatecken.</li>
                     <li><strong>Får INTE sitta ihop:</strong> Skriv in de par som behöver arbetsro från varandra.</li>
                 </ul>
                 
-                <h3>4. Slumpa placeringen!</h3>
-                <p>Stäng inställningarna och klicka på den stora gröna knappen <strong>Placera Elever!</strong>. Programmet testar nu tiotusentals kombinationer tills det hittar en placering som följer alla dina regler.</p>
+                <h3>4. Skapa placering eller grupper</h3>
+                <p><strong>Bordsplacering:</strong> Klicka på den gröna knappen <strong>Placera i Klassrummet!</strong> för att fylla dina ritade bänkar.</p>
+                <p><strong>Grupper:</strong> Fyll i hur många grupper du vill ha i rutan längst ner till vänster, och klicka därefter på den lila knappen <strong>Slumpa Grupper!</strong>. Programmet skapar då jämna grupper som fortfarande följer alla dina regler om vilka som får och inte får vara ihop.</p>
                 
                 <h3>5. Spara och Skriv ut</h3>
                 <ul>
@@ -293,7 +310,9 @@ Rincewind, Death</textarea>
     </div>
 
     <script>
+        let currentDrawMode = 'classroom'; 
         let lastClassroom = [];
+        let lastGroups = [];
 
         function saveProject() {
             const data = {
@@ -332,6 +351,7 @@ Rincewind, Death</textarea>
                     
                     alert("Klassen, layouten och anpassningarna laddades in!");
                     lastClassroom = [];
+                    lastGroups = [];
                     drawClassroom([]);
                 } catch (err) {
                     alert("Kunde inte läsa filen.");
@@ -368,6 +388,7 @@ Rincewind, Death</textarea>
             return text.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(s => s !== "");
         }
 
+        // --- BÄNKPLACERINGSLOGIK ---
         function checkRules(classroom, rules, friendsRules) {
             const rows = classroom.length;
             
@@ -429,6 +450,7 @@ Rincewind, Death</textarea>
         }
 
         function generatePlacement() {
+            currentDrawMode = 'classroom';
             const studentText = document.getElementById('input-students').value;
             let students = studentText.split('\n').map(s => s.trim()).filter(s => s !== "");
             let lowerStudents = students.map(s => s.toLowerCase());
@@ -569,6 +591,94 @@ Rincewind, Death</textarea>
             }
         }
 
+        // --- GRUPPINDELNINGSLOGIK ---
+        function checkGroupRules(groups, rules, friendsRules) {
+            for (let pair of rules) {
+                for (let group of groups) {
+                    let lowerGroup = group.map(s => s.toLowerCase());
+                    if (lowerGroup.includes(pair[0]) && lowerGroup.includes(pair[1])) {
+                        return false; 
+                    }
+                }
+            }
+            
+            for (let pair of friendsRules) {
+                let foundTogether = false;
+                for (let group of groups) {
+                    let lowerGroup = group.map(s => s.toLowerCase());
+                    if (lowerGroup.includes(pair[0])) {
+                        if (lowerGroup.includes(pair[1])) {
+                            foundTogether = true;
+                            break;
+                        } else {
+                            return false; 
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function generateGroups() {
+            currentDrawMode = 'groups';
+            const studentText = document.getElementById('input-students').value;
+            let students = studentText.split('\n').map(s => s.trim()).filter(s => s !== "");
+            let lowerStudents = students.map(s => s.toLowerCase());
+            
+            let numGroups = parseInt(document.getElementById('input-group-count').value);
+            
+            if (isNaN(numGroups) || numGroups < 1) {
+                alert("Ange ett giltigt antal grupper!"); return;
+            }
+            if (numGroups > students.length) {
+                alert("Du kan inte ha fler grupper än du har elever!"); return;
+            }
+
+            let rules = [];
+            document.getElementById('input-rules').value.split('\n').forEach(line => {
+                if (line.includes(',')) {
+                    let parts = line.split(',').map(p => p.trim().toLowerCase());
+                    if (parts.length === 2) rules.push(parts);
+                }
+            });
+
+            let friendsRules = [];
+            document.getElementById('input-friends').value.split('\n').forEach(line => {
+                if (line.includes(',')) {
+                    let parts = line.split(',').map(p => p.trim().toLowerCase());
+                    if (parts.length === 2 && lowerStudents.includes(parts[0]) && lowerStudents.includes(parts[1])) {
+                        friendsRules.push(parts);
+                    }
+                }
+            });
+
+            let finalGroups = null;
+
+            for (let attempt = 0; attempt < 50000; attempt++) {
+                let shuffled = [...students];
+                shuffleArray(shuffled);
+                
+                let groups = Array.from({length: numGroups}, () => []);
+                
+                for(let i = 0; i < shuffled.length; i++) {
+                    groups[i % numGroups].push(shuffled[i]);
+                }
+
+                if (checkGroupRules(groups, rules, friendsRules)) {
+                    finalGroups = groups;
+                    break;
+                }
+            }
+
+            if (!finalGroups) {
+                alert("Kunde inte skapa grupper som följer dina regler om vänner och ovänner. Testa att justera antalet grupper eller ändra reglerna!");
+            } else {
+                lastGroups = finalGroups;
+                drawGroups(finalGroups);
+            }
+        }
+
+        // --- RITA BÄNKAR ---
         function drawClassroom(classroom) {
             const canvas = document.getElementById('classroomCanvas');
             const container = document.getElementById('main-content');
@@ -576,16 +686,13 @@ Rincewind, Death</textarea>
             
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
-            
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             let a4W, a4H;
             if (canvas.width / canvas.height > 1.414) {
-                a4H = canvas.height * 0.95; 
-                a4W = a4H * 1.414;
+                a4H = canvas.height * 0.95; a4W = a4H * 1.414;
             } else {
-                a4W = canvas.width * 0.95; 
-                a4H = a4W / 1.414;
+                a4W = canvas.width * 0.95; a4H = a4W / 1.414;
             }
 
             const offsetX = (canvas.width - a4W) / 2;
@@ -598,22 +705,14 @@ Rincewind, Death</textarea>
 
             if (!classroom || classroom.length === 0) return;
 
-            const uDeskW = 1.0;  
-            const uDeskH = 0.45; 
-            const uGapX = 0.2;   
-            const uGapY = 0.3;   
+            const uDeskW = 1.0;  const uDeskH = 0.45; const uGapX = 0.2; const uGapY = 0.3;   
 
-            let maxRowUnits = 0;
-            let rowWidths = [];
-
+            let maxRowUnits = 0; let rowWidths = [];
             for (let r = 0; r < classroom.length; r++) {
-                let rowU = 0;
-                const row = classroom[r];
+                let rowU = 0; const row = classroom[r];
                 for (let c = 0; c < row.length; c++) {
                     rowU += uDeskW; 
-                    if (row[c] !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") {
-                        rowU += uGapX;
-                    }
+                    if (row[c] !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") rowU += uGapX;
                 }
                 rowWidths.push(rowU);
                 if (rowU > maxRowUnits) maxRowUnits = rowU;
@@ -622,40 +721,25 @@ Rincewind, Death</textarea>
             if (maxRowUnits === 0) return;
 
             const totalHeightUnits = classroom.length * uDeskH + (classroom.length - 1) * uGapY;
+            const marginX = a4W * 0.05; const marginY = a4H * 0.05; const boardAreaH = a4H * 0.15; 
+            const usableW = a4W - 2 * marginX; const usableH = a4H - 2 * marginY - boardAreaH;
 
-            const marginX = a4W * 0.05;
-            const marginY = a4H * 0.05;
-            const boardAreaH = a4H * 0.15; 
-
-            const usableW = a4W - 2 * marginX;
-            const usableH = a4H - 2 * marginY - boardAreaH;
-
-            const scaleX = usableW / maxRowUnits;
-            const scaleY = usableH / totalHeightUnits;
+            const scaleX = usableW / maxRowUnits; const scaleY = usableH / totalHeightUnits;
             let unitPx = Math.min(scaleX, scaleY);
-            
             if (unitPx > a4W * 0.12) unitPx = a4W * 0.12; 
 
-            const deskW = unitPx * uDeskW;
-            const deskH = unitPx * uDeskH;
-            const gapX = unitPx * uGapX;
-            const gapY = unitPx * uGapY;
-
+            const deskW = unitPx * uDeskW; const deskH = unitPx * uDeskH; const gapX = unitPx * uGapX; const gapY = unitPx * uGapY;
             const totalPxH = totalHeightUnits * unitPx;
             const startYGlobal = offsetY + marginY + boardAreaH + (usableH - totalPxH) / 2;
 
-            const boardW = a4W * 0.3;
-            const boardH = a4H * 0.08;
-            const boardX = offsetX + (a4W - boardW) / 2;
-            const boardY = offsetY + marginY;
+            const boardW = a4W * 0.3; const boardH = a4H * 0.08;
+            const boardX = offsetX + (a4W - boardW) / 2; const boardY = offsetY + marginY;
 
-            ctx.fillStyle = "#333";
-            ctx.fillRect(boardX, boardY, boardW, boardH);
+            ctx.fillStyle = "#333"; ctx.fillRect(boardX, boardY, boardW, boardH);
             ctx.fillStyle = "white";
             let boardFontSize = Math.max(12, boardH * 0.4);
             ctx.font = `bold ${boardFontSize}px Arial`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText("TAVLA", boardX + boardW/2, boardY + boardH/2);
 
             let fontSize = Math.max(12, deskH * 0.40); 
@@ -664,35 +748,110 @@ Rincewind, Death</textarea>
             for (let r = 0; r < classroom.length; r++) {
                 const row = classroom[r];
                 const rowPxW = rowWidths[r] * unitPx;
-                const startX = offsetX + marginX + (usableW - rowPxW) / 2; 
-
-                let currentX = startX;
+                let currentX = offsetX + marginX + (usableW - rowPxW) / 2; 
                 let currentY = startYGlobal + r * (deskH + gapY);
 
                 for (let c = 0; c < row.length; c++) {
                     const student = row[c];
-
                     if (student !== "[Gång]") {
                         ctx.fillStyle = (student === "[Tom plats]") ? "#f0f0f0" : "white";
                         ctx.fillRect(currentX, currentY, deskW, deskH);
-
-                        ctx.strokeStyle = "black";
-                        ctx.lineWidth = 1;
+                        ctx.strokeStyle = "black"; ctx.lineWidth = 1;
                         ctx.strokeRect(currentX, currentY, deskW, deskH);
-
                         ctx.fillStyle = (student === "[Tom plats]") ? "#999" : "black";
                         ctx.fillText(student, currentX + deskW/2, currentY + deskH/2);
                     }
-
                     currentX += deskW;
-                    if (student !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") {
-                        currentX += gapX;
-                    }
+                    if (student !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") currentX += gapX;
                 }
             }
         }
 
-        window.addEventListener('resize', () => { drawClassroom(lastClassroom); });
+        // --- RITA GRUPPER ---
+        function drawGroups(groups) {
+            const canvas = document.getElementById('classroomCanvas');
+            const container = document.getElementById('main-content');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let a4W, a4H;
+            if (canvas.width / canvas.height > 1.414) {
+                a4H = canvas.height * 0.95; a4W = a4H * 1.414;
+            } else {
+                a4W = canvas.width * 0.95; a4H = a4W / 1.414;
+            }
+
+            const offsetX = (canvas.width - a4W) / 2;
+            const offsetY = (canvas.height - a4H) / 2;
+
+            ctx.fillStyle = "white";
+            ctx.fillRect(offsetX, offsetY, a4W, a4H);
+            ctx.strokeStyle = "#ccc";
+            ctx.strokeRect(offsetX, offsetY, a4W, a4H);
+
+            if (!groups || groups.length === 0) return;
+
+            let cols = Math.ceil(Math.sqrt(groups.length));
+            let rows = Math.ceil(groups.length / cols);
+
+            const margin = a4W * 0.08;
+            const usableW = a4W - 2 * margin;
+            const usableH = a4H - 2 * margin;
+
+            const gap = a4W * 0.04;
+            const boxW = (usableW - (cols - 1) * gap) / cols;
+            const boxH = (usableH - (rows - 1) * gap) / rows;
+
+            ctx.textAlign = "center";
+            
+            let groupIndex = 0;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (groupIndex >= groups.length) break;
+                    
+                    let group = groups[groupIndex];
+                    let boxX = offsetX + margin + c * (boxW + gap);
+                    let boxY = offsetY + margin + r * (boxH + gap);
+
+                    ctx.fillStyle = "#f9f9f9";
+                    ctx.beginPath();
+                    ctx.roundRect(boxX, boxY, boxW, boxH, 15);
+                    ctx.fill();
+                    ctx.strokeStyle = "#2196F3";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#2196F3";
+                    let titleSize = Math.max(14, boxH * 0.15);
+                    ctx.font = `bold ${titleSize}px Arial`;
+                    ctx.textBaseline = "top";
+                    ctx.fillText(`Grupp ${groupIndex + 1}`, boxX + boxW/2, boxY + 15);
+
+                    ctx.fillStyle = "black";
+                    let nameSize = Math.max(12, boxH * 0.1);
+                    ctx.font = `${nameSize}px Arial`;
+                    ctx.textBaseline = "middle";
+                    
+                    let startY = boxY + titleSize + 30;
+                    let spacePerName = (boxH - titleSize - 40) / group.length;
+                    
+                    for(let i=0; i < group.length; i++) {
+                        ctx.fillText(group[i], boxX + boxW/2, startY + i * spacePerName + spacePerName/2);
+                    }
+
+                    groupIndex++;
+                }
+            }
+        }
+
+        window.addEventListener('resize', () => { 
+            if(currentDrawMode === 'classroom') drawClassroom(lastClassroom); 
+            else if(currentDrawMode === 'groups') drawGroups(lastGroups);
+        });
+        
         window.onload = function() { drawClassroom([]); }
     </script>
 </body>
