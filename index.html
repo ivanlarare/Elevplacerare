@@ -98,6 +98,16 @@
         }
         .license-badge:hover { background-color: #ccc; color: #000; }
 
+        .print-options {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f8f8;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
         #btn-print { background-color: #ff9800; color: white; }
         #btn-print:hover { background-color: #e68a00; }
 
@@ -210,6 +220,12 @@ Ridcully</textarea>
                 <span class="credit">Skapad av Ivan Kljucevic</span>
                 <a href="https://github.com/ivanlarare/Elevplacerare" target="_blank" class="license-badge">⚖️ GPL-3.0 Licens</a>
             </div>
+            
+            <div class="print-options">
+                <input type="checkbox" id="check-teacher-perspective" style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="check-teacher-perspective" style="margin: 0; cursor: pointer; font-size: 0.85rem;">Lärarperspektiv (Vänd namn uppochner)</label>
+            </div>
+            
             <button id="btn-print" onclick="window.print()">📄 Spara som PDF / Skriv ut</button>
         </div>
     </div>
@@ -291,13 +307,14 @@ Rincewind, Death</textarea>
                 <p>Inne i inställningarna klickar du på <strong>❌ Öppna</strong> bredvid Anpassningar.</p>
                 <ul>
                     <li><strong>Längst fram/bak:</strong> Gäller enbart för bordsplaceringen i klassrummet.</li>
-                    <li><strong>MÅSTE sitta ihop:</strong> Gäller <strong>enbart för bordsplaceringen</strong>. Eleverna hamnar horisontellt axel mot axel.</li>
-                    <li><strong>Får INTE sitta/vara i grupp ihop:</strong> Gäller både för bordsplacering och gruppindelning. Eleverna kommer aldrig hamna i samma grupp eller direkt intill varandra i bänkarna.</li>
+                    <li><strong>MÅSTE sitta ihop:</strong> Gäller enbart för bordsplaceringen. Eleverna hamnar horisontellt axel mot axel.</li>
+                    <li><strong>Får INTE sitta/vara i grupp ihop:</strong> Gäller både för bordsplacering och gruppindelning.</li>
                 </ul>
                 
                 <h3>4. Skapa placering eller grupper</h3>
-                <p><strong>Bordsplacering:</strong> Klicka på den gröna knappen <strong>Placera i Klassrummet!</strong> för att fylla bänkarna utifrån alla dina regler.</p>
-                <p><strong>Grupper:</strong> Ange antal grupper och klicka på lila knappen <strong>Slumpa Grupper!</strong>. Programmet skapar jämna grupper som följer reglerna om vilka elever som <strong>inte</strong> får vara ihop. (Regler om att sitta ihop ignoreras här).</p>
+                <p><strong>Bordsplacering:</strong> Klicka på den gröna knappen <strong>Placera i Klassrummet!</strong> för att fylla bänkarna.</p>
+                <p><strong>Grupper:</strong> Ange antal grupper och klicka på lila knappen <strong>Slumpa Grupper!</strong>.</p>
+                <p><strong>Lärarperspektiv (Vänd namn uppochner):</strong> Bockar du i denna ruta kommer alla namn (inklusive texten på tavlan) att vändas 180 grader vid utskrift. Detta är smidigt för läraren som står vid tavlan och tittar ut över klassen, då namnen på pappret blir rättvända från det hållet.</p>
                 
                 <h3>5. Spara och Skriv ut</h3>
                 <ul>
@@ -313,6 +330,7 @@ Rincewind, Death</textarea>
         let currentDrawMode = 'classroom'; 
         let lastClassroom = [];
         let lastGroups = [];
+        let isPrinting = false;
 
         function saveProject() {
             const data = {
@@ -352,7 +370,7 @@ Rincewind, Death</textarea>
                     alert("Klassen, layouten och anpassningarna laddades in!");
                     lastClassroom = [];
                     lastGroups = [];
-                    drawClassroom([]);
+                    redraw();
                 } catch (err) {
                     alert("Kunde inte läsa filen.");
                 }
@@ -369,12 +387,9 @@ Rincewind, Death</textarea>
         function closeHelp() { document.getElementById("helpModal").style.display = "none"; }
 
         window.onclick = function(event) {
-            const settingsM = document.getElementById("settingsModal");
-            const rulesM = document.getElementById("rulesModal");
-            const helpM = document.getElementById("helpModal");
-            if (event.target == settingsM) closeSettings();
-            if (event.target == rulesM) closeRules();
-            if (event.target == helpM) closeHelp();
+            if (event.target == document.getElementById("settingsModal")) closeSettings();
+            if (event.target == document.getElementById("rulesModal")) closeRules();
+            if (event.target == document.getElementById("helpModal")) closeHelp();
         }
 
         function shuffleArray(array) {
@@ -394,40 +409,33 @@ Rincewind, Death</textarea>
                 const cols = classroom[r].length;
                 for (let c = 0; c < cols; c++) {
                     const student1 = classroom[r][c];
-                    if (student1 === "[Tom plats]" || student1 === "[Gång]" || student1 === null) continue;
+                    if (!student1 || student1 === "[Gång]" || student1 === "[Tom plats]") continue;
                     const s1Lower = student1.toLowerCase(); 
-
                     if (c + 1 < cols) {
                         const student2 = classroom[r][c + 1];
                         if (student2 && student2 !== "[Gång]" && student2 !== "[Tom plats]") {
-                            const s2Lower = student2.toLowerCase();
-                            if (rules.some(pair => (pair[0] === s1Lower && pair[1] === s2Lower) || (pair[1] === s1Lower && pair[0] === s2Lower))) return false; 
+                            if (rules.some(pair => (pair[0] === s1Lower && pair[1] === student2.toLowerCase()) || (pair[1] === s1Lower && pair[0] === student2.toLowerCase()))) return false; 
                         }
                     }
                     if (r + 1 < rows && c < classroom[r+1].length) {
                         const student3 = classroom[r + 1][c];
                         if (student3 && student3 !== "[Gång]" && student3 !== "[Tom plats]") {
-                            const s3Lower = student3.toLowerCase();
-                            if (rules.some(pair => (pair[0] === s1Lower && pair[1] === s3Lower) || (pair[1] === s1Lower && pair[0] === s3Lower))) return false; 
+                            if (rules.some(pair => (pair[0] === s1Lower && pair[1] === student3.toLowerCase()) || (pair[1] === s1Lower && pair[0] === student3.toLowerCase()))) return false; 
                         }
                     }
                 }
             }
-            for (let i = 0; i < friendsRules.length; i++) {
-                let s1Lower = friendsRules[i][0];
-                let s2Lower = friendsRules[i][1];
-                let foundTogether = false;
+            for (let pair of friendsRules) {
+                let s1 = pair[0], s2 = pair[1], found = false;
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < classroom[r].length; c++) {
-                        let currentStudent = classroom[r][c];
-                        if (!currentStudent || currentStudent === "[Gång]" || currentStudent === "[Tom plats]") continue;
-                        if (currentStudent.toLowerCase() === s1Lower) {
-                            if (c + 1 < classroom[r].length && classroom[r][c+1] && classroom[r][c+1].toLowerCase() === s2Lower) foundTogether = true;
-                            if (c - 1 >= 0 && classroom[r][c-1] && classroom[r][c-1].toLowerCase() === s2Lower) foundTogether = true;
+                        if (classroom[r][c] && classroom[r][c].toLowerCase() === s1) {
+                            if (c + 1 < classroom[r].length && classroom[r][c+1] && classroom[r][c+1].toLowerCase() === s2) found = true;
+                            if (c - 1 >= 0 && classroom[r][c-1] && classroom[r][c-1].toLowerCase() === s2) found = true;
                         }
                     }
                 }
-                if (!foundTogether) return false; 
+                if (!found) return false;
             }
             return true; 
         }
@@ -452,9 +460,10 @@ Rincewind, Death</textarea>
                 });
                 if (row.length > 0) layoutMap.push(row);
             });
-            if (totalSeats === 0) { alert("Fel: Din layout har inga bänkar (X)!"); return; }
-            if (students.length > totalSeats) { alert(`Fel: Du har ${students.length} elever men bara ${totalSeats} bänkar!`); return; }
+            if (totalSeats === 0) { alert("Fel: Inga bänkar!"); return; }
+            if (students.length > totalSeats) { alert("Fel: För få bänkar!"); return; }
             while (frontStudents.length + backStudents.length + remainingStudents.length < totalSeats) remainingStudents.push("[Tom plats]");
+            
             let frontRowIdx = -1, backRowIdx = -1;
             for (let r = 0; r < layoutMap.length; r++) {
                 if (layoutMap[r].includes('BÄNK')) {
@@ -474,173 +483,156 @@ Rincewind, Death</textarea>
             }
             let rules = [];
             document.getElementById('input-rules').value.split('\n').forEach(line => {
-                if (line.includes(',')) {
-                    let parts = line.split(',').map(p => p.trim().toLowerCase());
-                    if (parts.length === 2) rules.push(parts);
-                }
+                if (line.includes(',')) rules.push(line.split(',').map(p => p.trim().toLowerCase()));
             });
             let friendsRules = [];
             document.getElementById('input-friends').value.split('\n').forEach(line => {
-                if (line.includes(',')) {
-                    let parts = line.split(',').map(p => p.trim().toLowerCase());
-                    if (parts.length === 2 && lowerStudents.includes(parts[0]) && lowerStudents.includes(parts[1])) friendsRules.push(parts);
-                }
+                if (line.includes(',')) friendsRules.push(line.split(',').map(p => p.trim().toLowerCase()));
             });
-            let finalClassroom = null;
-            for (let attempt = 0; attempt < 50000; attempt++) {
-                let classroom = [];
-                for(let r=0; r<layoutMap.length; r++) {
-                    let row = [];
-                    for(let c=0; c<layoutMap[r].length; c++) row.push(layoutMap[r][c] === 'GÅNG' ? "[Gång]" : null);
-                    classroom.push(row);
-                }
-                let sf = [...frontStudents]; shuffleArray(sf);
-                let sb = [...backStudents];  shuffleArray(sb);
-                let sr = [...remainingStudents]; shuffleArray(sr);
-                let sFrontSeats = [...frontSeats]; shuffleArray(sFrontSeats);
-                let sBackSeats = [...backSeats]; shuffleArray(sBackSeats);
-                sf.forEach(student => { let seat = sFrontSeats.pop(); classroom[seat.r][seat.c] = student; });
-                sb.forEach(student => { let seat = sBackSeats.pop(); classroom[seat.r][seat.c] = student; });
-                let sRemainingSeats = [...sFrontSeats, ...sBackSeats, ...otherSeats];
-                shuffleArray(sRemainingSeats);
-                sr.forEach(student => { let seat = sRemainingSeats.pop(); classroom[seat.r][seat.c] = student; });
-                if (checkRules(classroom, rules, friendsRules)) { finalClassroom = classroom; break; }
-            }
-            if (!finalClassroom) alert("Kunde inte hitta en placering. (Testat 50 000 gånger)");
-            else { lastClassroom = finalClassroom; drawClassroom(finalClassroom); }
-        }
 
-        // --- UPPDATERAD GRUPPINDELNINGSLOGIK (IGNORERAR VÄNNER) ---
-        function checkGroupRules(groups, rules) {
-            for (let pair of rules) {
-                for (let group of groups) {
-                    let lowerGroup = group.map(s => s.toLowerCase());
-                    if (lowerGroup.includes(pair[0]) && lowerGroup.includes(pair[1])) return false; 
-                }
+            for (let attempt = 0; attempt < 50000; attempt++) {
+                let classroom = layoutMap.map(row => row.map(cell => cell === 'GÅNG' ? "[Gång]" : null));
+                let sf = [...frontStudents], sb = [...backStudents], sr = [...remainingStudents];
+                shuffleArray(sf); shuffleArray(sb); shuffleArray(sr);
+                let fs = [...frontSeats], bs = [...backSeats], os = [...otherSeats];
+                shuffleArray(fs); shuffleArray(bs); shuffleArray(os);
+                sf.forEach(s => { let p = fs.pop(); classroom[p.r][p.c] = s; });
+                sb.forEach(s => { let p = bs.pop(); classroom[p.r][p.c] = s; });
+                let remPos = [...fs, ...bs, ...os]; shuffleArray(remPos);
+                sr.forEach(s => { let p = remPos.pop(); classroom[p.r][p.c] = s; });
+                if (checkRules(classroom, rules, friendsRules)) { lastClassroom = classroom; redraw(); return; }
             }
-            return true;
+            alert("Kunde inte hitta en placering. (Testat 50 000 gånger)");
         }
 
         function generateGroups() {
             currentDrawMode = 'groups';
-            const studentText = document.getElementById('input-students').value;
-            let students = studentText.split('\n').map(s => s.trim()).filter(s => s !== "");
-            let numGroups = parseInt(document.getElementById('input-group-count').value);
-            if (isNaN(numGroups) || numGroups < 1) { alert("Ange ett giltigt antal grupper!"); return; }
-            if (numGroups > students.length) { alert("Du kan inte ha fler grupper än du har elever!"); return; }
+            const students = document.getElementById('input-students').value.split('\n').map(s => s.trim()).filter(s => s !== "");
+            const numGroups = parseInt(document.getElementById('input-group-count').value);
+            if (isNaN(numGroups) || numGroups < 1) return;
             let rules = [];
             document.getElementById('input-rules').value.split('\n').forEach(line => {
-                if (line.includes(',')) {
-                    let parts = line.split(',').map(p => p.trim().toLowerCase());
-                    if (parts.length === 2) rules.push(parts);
-                }
+                if (line.includes(',')) rules.push(line.split(',').map(p => p.trim().toLowerCase()));
             });
-            let finalGroups = null;
             for (let attempt = 0; attempt < 50000; attempt++) {
-                let shuffled = [...students];
-                shuffleArray(shuffled);
+                let shuffled = [...students]; shuffleArray(shuffled);
                 let groups = Array.from({length: numGroups}, () => []);
-                for(let i = 0; i < shuffled.length; i++) groups[i % numGroups].push(shuffled[i]);
-                if (checkGroupRules(groups, rules)) { finalGroups = groups; break; }
+                shuffled.forEach((s, i) => groups[i % numGroups].push(s));
+                let ok = true;
+                for (let pair of rules) {
+                    for (let g of groups) {
+                        let lg = g.map(s => s.toLowerCase());
+                        if (lg.includes(pair[0]) && lg.includes(pair[1])) { ok = false; break; }
+                    }
+                    if (!ok) break;
+                }
+                if (ok) { lastGroups = groups; redraw(); return; }
             }
-            if (!finalGroups) alert("Kunde inte skapa grupper som följer reglerna för ovänner.");
-            else { lastGroups = finalGroups; drawGroups(finalGroups); }
+            alert("Kunde inte skapa grupper.");
         }
 
-        function drawClassroom(classroom) {
+        function redraw() {
             const canvas = document.getElementById('classroomCanvas');
             const container = document.getElementById('main-content');
             const ctx = canvas.getContext('2d');
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
+            
+            if (currentDrawMode === 'classroom') drawClassroom(lastClassroom, ctx, canvas);
+            else drawGroups(lastGroups, ctx, canvas);
+        }
+
+        function drawRotatedText(ctx, text, x, y, angle) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillText(text, 0, 0);
+            ctx.restore();
+        }
+
+        function drawClassroom(classroom, ctx, canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            let a4W, a4H;
-            if (canvas.width / canvas.height > 1.414) { a4H = canvas.height * 0.95; a4W = a4H * 1.414; } 
-            else { a4W = canvas.width * 0.95; a4H = a4W / 1.414; }
-            const offsetX = (canvas.width - a4W) / 2, offsetY = (canvas.height - a4H) / 2;
-            ctx.fillStyle = "white"; ctx.fillRect(offsetX, offsetY, a4W, a4H);
-            ctx.strokeStyle = "#ccc"; ctx.strokeRect(offsetX, offsetY, a4W, a4H);
-            if (!classroom || classroom.length === 0) return;
-            const uDeskW = 1.0, uDeskH = 0.45, uGapX = 0.2, uGapY = 0.3;   
-            let maxRowUnits = 0, rowWidths = [];
-            for (let r = 0; r < classroom.length; r++) {
-                let rowU = 0; const row = classroom[r];
-                for (let c = 0; c < row.length; c++) {
-                    rowU += uDeskW; 
-                    if (row[c] !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") rowU += uGapX;
-                }
-                rowWidths.push(rowU);
-                if (rowU > maxRowUnits) maxRowUnits = rowU;
-            }
-            const totalHeightUnits = classroom.length * uDeskH + (classroom.length - 1) * uGapY;
-            const marginX = a4W * 0.05, marginY = a4H * 0.05, boardAreaH = a4H * 0.15; 
-            const usableW = a4W - 2 * marginX, usableH = a4H - 2 * marginY - boardAreaH;
-            const scaleX = usableW / maxRowUnits, scaleY = usableH / totalHeightUnits;
-            let unitPx = Math.min(scaleX, scaleY);
-            if (unitPx > a4W * 0.12) unitPx = a4W * 0.12; 
-            const deskW = unitPx * uDeskW, deskH = unitPx * uDeskH, gapX = unitPx * uGapX, gapY = unitPx * uGapY;
-            const startYGlobal = offsetY + marginY + boardAreaH + (usableH - totalHeightUnits * unitPx) / 2;
-            ctx.fillStyle = "#333"; ctx.fillRect(offsetX + (a4W - a4W * 0.3) / 2, offsetY + marginY, a4W * 0.3, a4H * 0.08);
-            ctx.fillStyle = "white"; ctx.font = `bold ${Math.max(12, a4H * 0.08 * 0.4)}px Arial`;
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText("TAVLA", offsetX + a4W/2, offsetY + marginY + a4H * 0.04);
-            ctx.font = `${Math.max(12, deskH * 0.40)}px Arial`;
-            for (let r = 0; r < classroom.length; r++) {
-                const row = classroom[r]; const rowPxW = rowWidths[r] * unitPx;
-                let currentX = offsetX + marginX + (usableW - rowPxW) / 2; 
-                let currentY = startYGlobal + r * (deskH + gapY);
-                for (let c = 0; c < row.length; c++) {
-                    const student = row[c];
-                    if (student !== "[Gång]") {
-                        ctx.fillStyle = (student === "[Tom plats]") ? "#f0f0f0" : "white";
-                        ctx.fillRect(currentX, currentY, deskW, deskH);
-                        ctx.strokeStyle = "black"; ctx.lineWidth = 1; ctx.strokeRect(currentX, currentY, deskW, deskH);
-                        ctx.fillStyle = (student === "[Tom plats]") ? "#999" : "black";
-                        ctx.fillText(student, currentX + deskW/2, currentY + deskH/2);
+            const teacherPerspective = document.getElementById('check-teacher-perspective').checked;
+            const textAngle = (isPrinting && teacherPerspective) ? Math.PI : 0;
+
+            let a4W = canvas.width / canvas.height > 1.414 ? canvas.height * 0.95 * 1.414 : canvas.width * 0.95;
+            let a4H = a4W / 1.414;
+            const ox = (canvas.width - a4W) / 2, oy = (canvas.height - a4H) / 2;
+            ctx.fillStyle = "white"; ctx.fillRect(ox, oy, a4W, a4H);
+            ctx.strokeStyle = "#ccc"; ctx.strokeRect(ox, oy, a4W, a4H);
+            if (!classroom.length) return;
+            
+            const uW = 1.0, uH = 0.45, uGx = 0.2, uGy = 0.3;
+            let maxU = 0, rowU = [];
+            classroom.forEach(r => {
+                let u = 0;
+                r.forEach((c, i) => { u += uW; if (c !== "[Gång]" && i+1 < r.length && r[i+1] !== "[Gång]") u += uGx; });
+                rowU.push(u); if (u > maxU) maxU = u;
+            });
+            let unit = Math.min((a4W * 0.9) / maxU, (a4H * 0.7) / (classroom.length * uH + (classroom.length - 1) * uGy));
+            if (unit > a4W * 0.12) unit = a4W * 0.12; 
+            const dW = unit * uW, dH = unit * uH, gx = unit * uGx, gy = unit * uGy;
+            const sy = oy + a4H * 0.2 + (a4H * 0.75 - (classroom.length * dH + (classroom.length-1) * gy)) / 2;
+            
+            ctx.fillStyle = "#333"; ctx.fillRect(ox + a4W * 0.35, oy + a4H * 0.05, a4W * 0.3, a4H * 0.08);
+            ctx.fillStyle = "white"; ctx.font = `bold ${a4H * 0.04}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            
+            // Rotera texten på tavlan om ibockat
+            drawRotatedText(ctx, "TAVLA", ox + a4W/2, oy + a4H * 0.09, textAngle);
+            
+            ctx.font = `${dH * 0.4}px Arial`;
+            classroom.forEach((r, i) => {
+                let cx = ox + (a4W - rowU[i] * unit) / 2;
+                r.forEach((s, j) => {
+                    if (s !== "[Gång]") {
+                        ctx.fillStyle = s === "[Tom plats]" ? "#f0f0f0" : "white";
+                        ctx.fillRect(cx, sy + i * (dH + gy), dW, dH);
+                        ctx.strokeStyle = "black"; ctx.lineWidth = 1; ctx.strokeRect(cx, sy + i * (dH + gy), dW, dH);
+                        ctx.fillStyle = s === "[Tom plats]" ? "#999" : "black";
+                        
+                        drawRotatedText(ctx, s, cx + dW/2, sy + i * (dH + gy) + dH/2, textAngle);
                     }
-                    currentX += deskW;
-                    if (student !== "[Gång]" && c + 1 < row.length && row[c+1] !== "[Gång]") currentX += gapX;
-                }
-            }
+                    cx += dW; if (s !== "[Gång]" && j+1 < r.length && r[j+1] !== "[Gång]") cx += gx;
+                });
+            });
         }
 
-        function drawGroups(groups) {
-            const canvas = document.getElementById('classroomCanvas'), container = document.getElementById('main-content'), ctx = canvas.getContext('2d');
-            canvas.width = container.clientWidth; canvas.height = container.clientHeight;
+        function drawGroups(groups, ctx, canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            let a4W, a4H;
-            if (canvas.width / canvas.height > 1.414) { a4H = canvas.height * 0.95; a4W = a4H * 1.414; } 
-            else { a4W = canvas.width * 0.95; a4H = a4W / 1.414; }
-            const offsetX = (canvas.width - a4W) / 2, offsetY = (canvas.height - a4H) / 2;
-            ctx.fillStyle = "white"; ctx.fillRect(offsetX, offsetY, a4W, a4H);
-            ctx.strokeStyle = "#ccc"; ctx.strokeRect(offsetX, offsetY, a4W, a4H);
-            if (!groups || groups.length === 0) return;
-            let cols = Math.ceil(Math.sqrt(groups.length)), rows = Math.ceil(groups.length / cols);
-            const margin = a4W * 0.08, gap = a4W * 0.04;
-            const boxW = (a4W - 2 * margin - (cols - 1) * gap) / cols, boxH = (a4H - 2 * margin - (rows - 1) * gap) / rows;
+            const teacherPerspective = document.getElementById('check-teacher-perspective').checked;
+            const textAngle = (isPrinting && teacherPerspective) ? Math.PI : 0;
+
+            let a4W = canvas.width / canvas.height > 1.414 ? canvas.height * 0.95 * 1.414 : canvas.width * 0.95;
+            let a4H = a4W / 1.414;
+            const ox = (canvas.width - a4W) / 2, oy = (canvas.height - a4H) / 2;
+            ctx.fillStyle = "white"; ctx.fillRect(ox, oy, a4W, a4H);
+            ctx.strokeStyle = "#ccc"; ctx.strokeRect(ox, oy, a4W, a4H);
+            if (!groups.length) return;
+            let c = Math.ceil(Math.sqrt(groups.length)), r = Math.ceil(groups.length / c);
+            let m = a4W * 0.08, g = a4W * 0.04;
+            let bw = (a4W - 2*m - (c-1)*g) / c, bh = (a4H - 2*m - (r-1)*g) / r;
             ctx.textAlign = "center";
-            let groupIndex = 0;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    if (groupIndex >= groups.length) break;
-                    let group = groups[groupIndex], boxX = offsetX + margin + c * (boxW + gap), boxY = offsetY + margin + r * (boxH + gap);
-                    ctx.fillStyle = "#f9f9f9"; ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 15); ctx.fill();
-                    ctx.strokeStyle = "#2196F3"; ctx.lineWidth = 3; ctx.stroke();
-                    ctx.fillStyle = "#2196F3"; ctx.font = `bold ${Math.max(14, boxH * 0.15)}px Arial`; ctx.textBaseline = "top";
-                    ctx.fillText(`Grupp ${groupIndex + 1}`, boxX + boxW/2, boxY + 15);
-                    ctx.fillStyle = "black"; ctx.font = `${Math.max(12, boxH * 0.1)}px Arial`; ctx.textBaseline = "middle";
-                    let startY = boxY + Math.max(14, boxH * 0.15) + 30, spacePerName = (boxH - Math.max(14, boxH * 0.15) - 40) / group.length;
-                    for(let i=0; i < group.length; i++) ctx.fillText(group[i], boxX + boxW/2, startY + i * spacePerName + spacePerName/2);
-                    groupIndex++;
-                }
-            }
+            groups.forEach((gr, i) => {
+                let bx = ox + m + (i%c) * (bw + g), by = oy + m + Math.floor(i/c) * (bh + g);
+                ctx.fillStyle = "#f9f9f9"; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 15); ctx.fill();
+                ctx.strokeStyle = "#2196F3"; ctx.lineWidth = 3; ctx.stroke();
+                
+                ctx.fillStyle = "#2196F3"; 
+                ctx.font = `bold ${bh * 0.15}px Arial`; ctx.textBaseline = "middle";
+                drawRotatedText(ctx, `Grupp ${i + 1}`, bx + bw/2, by + bh * 0.2, textAngle);
+
+                ctx.fillStyle = "black"; ctx.font = `${bh * 0.1}px Arial`; ctx.textBaseline = "middle";
+                let step = (bh * 0.6) / gr.length;
+                gr.forEach((s, j) => {
+                    drawRotatedText(ctx, s, bx + bw/2, by + bh * 0.35 + j * step, textAngle);
+                });
+            });
         }
 
-        window.addEventListener('resize', () => { 
-            if(currentDrawMode === 'classroom') drawClassroom(lastClassroom); 
-            else if(currentDrawMode === 'groups') drawGroups(lastGroups);
-        });
-        window.onload = function() { drawClassroom([]); }
+        window.onbeforeprint = () => { isPrinting = true; redraw(); };
+        window.onafterprint = () => { isPrinting = false; redraw(); };
+        window.addEventListener('resize', redraw);
+        window.onload = redraw;
     </script>
 </body>
 </html>
