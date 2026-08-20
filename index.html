@@ -98,7 +98,7 @@
         }
         .license-badge:hover { background-color: #ccc; color: #000; }
 
-        .print-options {
+        .extra-val {
             display: flex;
             align-items: center;
             gap: 10px;
@@ -159,10 +159,27 @@
         #btn-close-help { background-color: #333; color: white; margin-top: 15px; }
 
         @media print {
-            #sidebar { display: none; }
-            #main-content { padding: 0; }
-            body { background-color: white; }
-            canvas { width: 100vw; height: 100vh; }
+            @page {
+                size: landscape;
+                margin: 0.5cm; /* Tvinga webbläsaren att inte använda standardmarginaler */
+            }
+            #sidebar { display: none !important; }
+            #main-content { 
+                padding: 0; 
+                margin: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100vw;
+                height: 100vh;
+            }
+            body { background-color: white; margin: 0; }
+            canvas { 
+                width: 100vw !important; 
+                height: 100vh !important;
+                object-fit: contain !important; /* Säkerställer att hela ytan utnyttjas rätt */
+                display: block;
+            }
         }
     </style>
 </head>
@@ -221,9 +238,9 @@ Ridcully</textarea>
                 <a href="https://github.com/ivanlarare/Elevplacerare" target="_blank" class="license-badge">⚖️ GPL-3.0 Licens</a>
             </div>
             
-            <div class="print-options">
-                <input type="checkbox" id="check-teacher-perspective" style="width: 20px; height: 20px; cursor: pointer;">
-                <label for="check-teacher-perspective" style="margin: 0; cursor: pointer; font-size: 0.85rem;">Lärarperspektiv (Vänd namn uppochner)</label>
+            <div class="extra-val">
+                <input type="checkbox" id="lararvy-checkbox" style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="lararvy-checkbox" style="margin: 0; cursor: pointer; font-size: 0.85rem;">Lärarperspektiv (Vänd namn uppochner)</label>
             </div>
             
             <button id="btn-print" onclick="window.print()">📄 Spara som PDF / Skriv ut</button>
@@ -234,6 +251,7 @@ Ridcully</textarea>
         <canvas id="classroomCanvas"></canvas>
     </div>
 
+    <!-- 1. HUVUDINSTÄLLNINGAR (LAYOUT) -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeSettings()">&times;</span>
@@ -256,6 +274,7 @@ X X X - X X - X X X</textarea>
         </div>
     </div>
 
+    <!-- 2. UNDERMENY FÖR ANPASSNINGAR -->
     <div id="rulesModal" class="modal">
         <div class="modal-content" style="width: 350px;">
             <span class="close-btn" onclick="closeRules()">&times;</span>
@@ -286,6 +305,7 @@ Rincewind, Death</textarea>
         </div>
     </div>
 
+    <!-- 3. POP-UP FÖR HJÄLP & GUIDE -->
     <div id="helpModal" class="modal">
         <div class="modal-content help-content">
             <span class="close-btn" onclick="closeHelp()">&times;</span>
@@ -445,11 +465,14 @@ Rincewind, Death</textarea>
             const studentText = document.getElementById('input-students').value;
             let students = studentText.split('\n').map(s => s.trim()).filter(s => s !== "");
             let lowerStudents = students.map(s => s.toLowerCase());
+            
             const reqFront = parseNames(document.getElementById('input-front').value);
             const reqBack = parseNames(document.getElementById('input-back').value);
+            
             let frontStudents = students.filter(name => reqFront.includes(name.toLowerCase()));
             let backStudents = students.filter(name => reqBack.includes(name.toLowerCase()));
             let remainingStudents = students.filter(name => !reqFront.includes(name.toLowerCase()) && !reqBack.includes(name.toLowerCase()));
+            
             const layoutText = document.getElementById('input-layout').value;
             let layoutMap = [], totalSeats = 0;
             layoutText.split('\n').forEach(line => {
@@ -460,9 +483,13 @@ Rincewind, Death</textarea>
                 });
                 if (row.length > 0) layoutMap.push(row);
             });
+            
             if (totalSeats === 0) { alert("Fel: Inga bänkar!"); return; }
             if (students.length > totalSeats) { alert("Fel: För få bänkar!"); return; }
-            while (frontStudents.length + backStudents.length + remainingStudents.length < totalSeats) remainingStudents.push("[Tom plats]");
+            
+            while (frontStudents.length + backStudents.length + remainingStudents.length < totalSeats) {
+                remainingStudents.push("[Tom plats]");
+            }
             
             let frontRowIdx = -1, backRowIdx = -1;
             for (let r = 0; r < layoutMap.length; r++) {
@@ -471,6 +498,7 @@ Rincewind, Death</textarea>
                     backRowIdx = r; 
                 }
             }
+            
             let frontSeats = [], backSeats = [], otherSeats = [];
             for (let r = 0; r < layoutMap.length; r++) {
                 for (let c = 0; c < layoutMap[r].length; c++) {
@@ -481,43 +509,75 @@ Rincewind, Death</textarea>
                     }
                 }
             }
+            
             let rules = [];
             document.getElementById('input-rules').value.split('\n').forEach(line => {
-                if (line.includes(',')) rules.push(line.split(',').map(p => p.trim().toLowerCase()));
+                if (line.includes(',')) {
+                    let parts = line.split(',').map(p => p.trim().toLowerCase());
+                    if (parts.length === 2 && lowerStudents.includes(parts[0]) && lowerStudents.includes(parts[1])) {
+                        rules.push(parts);
+                    }
+                }
             });
+            
             let friendsRules = [];
             document.getElementById('input-friends').value.split('\n').forEach(line => {
-                if (line.includes(',')) friendsRules.push(line.split(',').map(p => p.trim().toLowerCase()));
+                if (line.includes(',')) {
+                    let parts = line.split(',').map(p => p.trim().toLowerCase());
+                    if (parts.length === 2 && lowerStudents.includes(parts[0]) && lowerStudents.includes(parts[1])) {
+                        friendsRules.push(parts);
+                    }
+                }
             });
 
             for (let attempt = 0; attempt < 50000; attempt++) {
                 let classroom = layoutMap.map(row => row.map(cell => cell === 'GÅNG' ? "[Gång]" : null));
+                
                 let sf = [...frontStudents], sb = [...backStudents], sr = [...remainingStudents];
                 shuffleArray(sf); shuffleArray(sb); shuffleArray(sr);
+                
                 let fs = [...frontSeats], bs = [...backSeats], os = [...otherSeats];
                 shuffleArray(fs); shuffleArray(bs); shuffleArray(os);
+                
                 sf.forEach(s => { let p = fs.pop(); classroom[p.r][p.c] = s; });
                 sb.forEach(s => { let p = bs.pop(); classroom[p.r][p.c] = s; });
+                
                 let remPos = [...fs, ...bs, ...os]; shuffleArray(remPos);
                 sr.forEach(s => { let p = remPos.pop(); classroom[p.r][p.c] = s; });
-                if (checkRules(classroom, rules, friendsRules)) { lastClassroom = classroom; redraw(); return; }
+                
+                if (checkRules(classroom, rules, friendsRules)) { 
+                    lastClassroom = classroom; 
+                    redraw(); 
+                    return; 
+                }
             }
-            alert("Kunde inte hitta en placering. (Testat 50 000 gånger)");
+            alert("Kunde inte hitta en placering. Din kombination av anpassningar går inte att lösa med den här klasslistan. (Testat 50 000 gånger)");
         }
 
         function generateGroups() {
             currentDrawMode = 'groups';
-            const students = document.getElementById('input-students').value.split('\n').map(s => s.trim()).filter(s => s !== "");
+            const studentText = document.getElementById('input-students').value;
+            let students = studentText.split('\n').map(s => s.trim()).filter(s => s !== "");
+            let lowerStudents = students.map(s => s.toLowerCase());
+            
             const numGroups = parseInt(document.getElementById('input-group-count').value);
             if (isNaN(numGroups) || numGroups < 1) return;
+            
             let rules = [];
             document.getElementById('input-rules').value.split('\n').forEach(line => {
-                if (line.includes(',')) rules.push(line.split(',').map(p => p.trim().toLowerCase()));
+                if (line.includes(',')) {
+                    let parts = line.split(',').map(p => p.trim().toLowerCase());
+                    if (parts.length === 2 && lowerStudents.includes(parts[0]) && lowerStudents.includes(parts[1])) {
+                        rules.push(parts);
+                    }
+                }
             });
+            
             for (let attempt = 0; attempt < 50000; attempt++) {
                 let shuffled = [...students]; shuffleArray(shuffled);
                 let groups = Array.from({length: numGroups}, () => []);
                 shuffled.forEach((s, i) => groups[i % numGroups].push(s));
+                
                 let ok = true;
                 for (let pair of rules) {
                     for (let g of groups) {
@@ -526,17 +586,28 @@ Rincewind, Death</textarea>
                     }
                     if (!ok) break;
                 }
-                if (ok) { lastGroups = groups; redraw(); return; }
+                if (ok) { 
+                    lastGroups = groups; 
+                    redraw(); 
+                    return; 
+                }
             }
-            alert("Kunde inte skapa grupper.");
+            alert("Kunde inte skapa grupper. Reglerna om vilka som inte får sitta ihop går inte att lösa med detta antal grupper.");
         }
 
         function redraw() {
             const canvas = document.getElementById('classroomCanvas');
             const container = document.getElementById('main-content');
             const ctx = canvas.getContext('2d');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            
+            // Vid utskrift skapar vi en högupplöst, statisk A4-canvas (300 DPI) för perfekt papperspassning
+            if (isPrinting) {
+                canvas.width = 3508;
+                canvas.height = 2480;
+            } else {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
             
             if (currentDrawMode === 'classroom') drawClassroom(lastClassroom, ctx, canvas);
             else drawGroups(lastGroups, ctx, canvas);
@@ -552,14 +623,16 @@ Rincewind, Death</textarea>
 
         function drawClassroom(classroom, ctx, canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const teacherPerspective = document.getElementById('check-teacher-perspective').checked;
+            const teacherPerspective = document.getElementById('lararvy-checkbox').checked;
             const textAngle = (isPrinting && teacherPerspective) ? Math.PI : 0;
 
             let a4W = canvas.width / canvas.height > 1.414 ? canvas.height * 0.95 * 1.414 : canvas.width * 0.95;
             let a4H = a4W / 1.414;
             const ox = (canvas.width - a4W) / 2, oy = (canvas.height - a4H) / 2;
+            
             ctx.fillStyle = "white"; ctx.fillRect(ox, oy, a4W, a4H);
             ctx.strokeStyle = "#ccc"; ctx.strokeRect(ox, oy, a4W, a4H);
+            
             if (!classroom.length) return;
             
             const uW = 1.0, uH = 0.45, uGx = 0.2, uGy = 0.3;
@@ -569,15 +642,16 @@ Rincewind, Death</textarea>
                 r.forEach((c, i) => { u += uW; if (c !== "[Gång]" && i+1 < r.length && r[i+1] !== "[Gång]") u += uGx; });
                 rowU.push(u); if (u > maxU) maxU = u;
             });
+            
             let unit = Math.min((a4W * 0.9) / maxU, (a4H * 0.7) / (classroom.length * uH + (classroom.length - 1) * uGy));
             if (unit > a4W * 0.12) unit = a4W * 0.12; 
+            
             const dW = unit * uW, dH = unit * uH, gx = unit * uGx, gy = unit * uGy;
             const sy = oy + a4H * 0.2 + (a4H * 0.75 - (classroom.length * dH + (classroom.length-1) * gy)) / 2;
             
             ctx.fillStyle = "#333"; ctx.fillRect(ox + a4W * 0.35, oy + a4H * 0.05, a4W * 0.3, a4H * 0.08);
             ctx.fillStyle = "white"; ctx.font = `bold ${a4H * 0.04}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
             
-            // Rotera texten på tavlan om ibockat
             drawRotatedText(ctx, "TAVLA", ox + a4W/2, oy + a4H * 0.09, textAngle);
             
             ctx.font = `${dH * 0.4}px Arial`;
@@ -599,18 +673,22 @@ Rincewind, Death</textarea>
 
         function drawGroups(groups, ctx, canvas) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const teacherPerspective = document.getElementById('check-teacher-perspective').checked;
+            const teacherPerspective = document.getElementById('lararvy-checkbox').checked;
             const textAngle = (isPrinting && teacherPerspective) ? Math.PI : 0;
 
             let a4W = canvas.width / canvas.height > 1.414 ? canvas.height * 0.95 * 1.414 : canvas.width * 0.95;
             let a4H = a4W / 1.414;
             const ox = (canvas.width - a4W) / 2, oy = (canvas.height - a4H) / 2;
+            
             ctx.fillStyle = "white"; ctx.fillRect(ox, oy, a4W, a4H);
             ctx.strokeStyle = "#ccc"; ctx.strokeRect(ox, oy, a4W, a4H);
+            
             if (!groups.length) return;
+            
             let c = Math.ceil(Math.sqrt(groups.length)), r = Math.ceil(groups.length / c);
             let m = a4W * 0.08, g = a4W * 0.04;
             let bw = (a4W - 2*m - (c-1)*g) / c, bh = (a4H - 2*m - (r-1)*g) / r;
+            
             ctx.textAlign = "center";
             groups.forEach((gr, i) => {
                 let bx = ox + m + (i%c) * (bw + g), by = oy + m + Math.floor(i/c) * (bh + g);
@@ -629,9 +707,17 @@ Rincewind, Death</textarea>
             });
         }
 
-        window.onbeforeprint = () => { isPrinting = true; redraw(); };
-        window.onafterprint = () => { isPrinting = false; redraw(); };
-        window.addEventListener('resize', redraw);
+        window.onbeforeprint = () => { 
+            isPrinting = true; 
+            redraw(); 
+        };
+        window.onafterprint = () => { 
+            isPrinting = false; 
+            redraw(); 
+        };
+        window.addEventListener('resize', () => {
+            if (!isPrinting) redraw();
+        });
         window.onload = redraw;
     </script>
 </body>
